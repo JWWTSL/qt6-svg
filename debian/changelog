@@ -1,3 +1,10 @@
+qt6-svg (6.8.0-0deepin2) unstable; urgency=medium
+
+  * Fix: Check node type before static_cast downcast to prevent
+    heap overflow in QSvgMarker and QSvgMask (OSS-Fuzz #496327371).
+
+ -- Tian Shilin <tianshilin@uniontech.com>  Tue, 12 May 2026 15:53:37 +0800
+
 qt6-svg (6.8.0-0deepin1) unstable; urgency=medium
 
   * update version for rebuild.

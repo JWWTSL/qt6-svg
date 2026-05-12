@@ -1,0 +1,41 @@
+Description: Check node type before static_cast downcast in QSvgMarker and QSvgMask
+ A bad cast in QSvgMarker::drawMarkersForNode lead to an endless recursion
+ resulting in a heap overflow (OSS-Fuzz issue 496327371).
+ .
+ The fix checks that the referenced node's type() matches before performing
+ the static_cast, preventing bad casts that could lead to heap corruption
+ or infinite recursion.
+Author: Robert Löhning <robert.loehning@qt.io>
+Origin: https://codereview.qt-project.org/c/qt/qtsvg/+/727507
+Bug: https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=496327371
+Last-Update: 2026-05-12
+
+Index: qt6-svg/src/svg/qsvgstructure.cpp
+--- qt6-svg.orig/src/svg/qsvgstructure.cpp
++++ qt6-svg/src/svg/qsvgstructure.cpp
+@@ -352,10 +352,11 @@ void QSvgMarker::drawMarkersForNode(QSvg
+                                               path->markerEndId() };
+         }
+         for (auto &i : marks) {
+-            QSvgMarker *markNode = static_cast<QSvgMarker*>(node->document()->namedNode(i.markerId));
+-            if (!markNode) {
++            QSvgNode *referencedNode = node->document()->namedNode(i.markerId);
++            if (!referencedNode || referencedNode->type() != QSvgNode::Marker) {
+                 continue;
+             }
++            QSvgMarker *markNode = static_cast<QSvgMarker*>(referencedNode);
+             p->save();
+             p->translate(i.x, i.y);
+             if (markNode->orientation() == QSvgMarker::Orientation::Value)
+@@ -644,8 +645,9 @@ QImage QSvgMask::createMask(QPainter *p,
+ 
+     // Chrome seems to return the mask of the mask if a mask is set on the mask
+     if (this->hasMask()) {
+-        QSvgMask *maskNode = static_cast<QSvgMask*>(document()->namedNode(this->maskId()));
+-        if (maskNode) {
++        QSvgNode *referencedNode = document()->namedNode(this->maskId());
++        if (referencedNode && referencedNode->type() == QSvgNode::Mask) {
++            QSvgMask *maskNode = static_cast<QSvgMask *>(referencedNode);
+             QRectF boundsRect;
+             return maskNode->createMask(p, states, localRect, &boundsRect);
+         }
